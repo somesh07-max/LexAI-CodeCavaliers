@@ -1,5 +1,11 @@
 import { Link } from 'react-router-dom';
 
+export const brandAssets = {
+  logo: '/brand/lexai-logo.png',
+  wordmark: '/brand/lexai-wordmark.png',
+  mark: '/brand/lexai-mark-monochrome.png',
+};
+
 const paths = {
   plus: <><path d="M12 5v14M5 12h14" /></>,
   arrow: <><path d="m9 18 6-6-6-6" /></>,
@@ -23,7 +29,7 @@ export function Icon({ name, size = 20, className = '' }) {
 }
 
 export function Brand({ compact = false }) {
-  return <Link to="/app" className={`brand ${compact ? 'brand--compact' : ''}`}><span className="brand__mark"><Icon name="bridge" size={21} /></span><span>Lex<span>Ai</span></span></Link>;
+  return <Link to="/app" className={`brand ${compact ? 'brand--compact' : ''}`} aria-label="LexAi home"><img src={compact ? brandAssets.mark : brandAssets.wordmark} alt="LexAi" /></Link>;
 }
 
 export function PulseLoader({ label = 'Loading…', compact = false }) {
@@ -31,7 +37,7 @@ export function PulseLoader({ label = 'Loading…', compact = false }) {
 }
 
 export function LoadingScreen({ label }) {
-  return <main className="loading-screen"><Brand /><PulseLoader label={label} /></main>;
+  return <main className="loading-screen"><img className="loading-screen__logo" src={brandAssets.logo} alt="LexAi" /><PulseLoader label={label} /></main>;
 }
 
 export function ErrorBanner({ message, onDismiss }) {
@@ -40,5 +46,5 @@ export function ErrorBanner({ message, onDismiss }) {
 }
 
 export function EmptyState({ title, copy, actionLabel, onAction, small = false }) {
-  return <div className={`empty-state ${small ? 'empty-state--small' : ''}`}><div className="empty-state__arc" aria-hidden="true" /><Icon name="bridge" size={small ? 24 : 34} /><h3>{title}</h3>{copy && <p>{copy}</p>}{actionLabel && <button type="button" className="button button--outline" onClick={onAction}><Icon name="plus" size={17} />{actionLabel}</button>}</div>;
+  return <div className={`empty-state ${small ? 'empty-state--small' : ''}`}><div className="empty-state__arc" aria-hidden="true" /><span className="empty-state__brand-mark"><img src={brandAssets.mark} alt="" /></span><h3>{title}</h3>{copy && <p>{copy}</p>}{actionLabel && <button type="button" className="button button--outline" onClick={onAction}><Icon name="plus" size={17} />{actionLabel}</button>}</div>;
 }
