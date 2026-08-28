@@ -8,47 +8,46 @@ When the real model is ready, just replace what's INSIDE these two
 functions. Keep the function names and inputs/outputs the same, and
 main.py never needs to change.
 """
- 
-import httpx
- 
-OLLAMA_HOST = "http://localhost:11434"
-OLLAMA_MODEL = "llama3"
- 
- 
+from ai_tutor import answer_question, translate
+
+
 async def generate_response(conversation_id: str, message: str) -> str:
     """
-    Takes the student's message, returns the AI tutor's reply (a string).
+    Calls the AI Tutor model.
+
+    FastAPI receives:
+        conversation_id
+        message
+
+    Your AI Tutor handles:
+        RAG retrieval
+        Gemini answer generation
+        conversation history
+
+    Returns only the generated answer string because
+    the existing FastAPI API expects `response: str`.
     """
-    payload = {
-        "model": OLLAMA_MODEL,
-        "prompt": message,
-        "stream": False,
-    }
- 
-    async with httpx.AsyncClient(timeout=60) as client:
-        resp = await client.post(f"{OLLAMA_HOST}/api/generate", json=payload)
- 
-    data = resp.json()
-    return data["response"]
- 
- 
-async def translate_text(text: str, target_language: str) -> str:
-    """
-    Takes text + a target language, returns the translated text (a string).
-    """
-    prompt = (
-        f"Translate the following text into {target_language}. "
-        f"Return only the translated text, nothing else.\n\n{text}"
+
+    result = answer_question(
+        message,
+        conversation_id=conversation_id
     )
- 
-    payload = {
-        "model": OLLAMA_MODEL,
-        "prompt": prompt,
-        "stream": False,
-    }
- 
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(f"{OLLAMA_HOST}/api/generate", json=payload)
- 
-    data = resp.json()
-    return data["response"].strip()
+
+    return result["answer"]
+
+
+async def translate_text(
+    text: str,
+    target_language: str
+) -> str:
+    """
+    Calls the AI Tutor translation service.
+
+    Translation is handled by your existing translator.py
+    implementation (Sarvam).
+    """
+
+    return translate(
+        text,
+        target_language=target_language
+    )
