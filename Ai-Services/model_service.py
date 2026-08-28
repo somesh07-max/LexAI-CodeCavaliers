@@ -20,15 +20,23 @@ schemas.py). Node's message.controller.js currently only reads
 data.response, so this is backward compatible - but the source list
 is there if/when you want to store or display it.
 """
-
+import sys
 import asyncio
+from pathlib import Path
+
+AI_TUTOR_PROJECT = (
+    Path(__file__).resolve().parent
+    / "tutor"
+    / "ai-tutor-project"
+)
+
+sys.path.insert(0, str(AI_TUTOR_PROJECT))
 
 from ai_tutor import config
 from ai_tutor.vector_store import load_vectorstore
 from ai_tutor.retriever import retrieve, build_context_string, format_sources
 from ai_tutor.rag import generate_answer, build_chat_history_messages
 from ai_tutor import translator
-
 _vectorstore = None  # cached after first load, same pattern as llm.py's _llm
 
 
