@@ -1,7 +1,7 @@
 const Message = require("../models/message.js");
 const Conversation = require("../models/conversation.js");
-const config = require("../config/config.js");
 const AppError = require("../utility/AppError.js");
+const { callAI } = require("../services/ai.service.js");
 
 
 
@@ -21,40 +21,12 @@ async function createMessage(req, res) {
         throw new AppError("Conversation not found", 404);
     }
 
-    const studentMessage = await Message.create({
-        conversation_id,
-        sender: "student",
-        content
-    });
+    const data = await callAI("/generate", { conversation_id, message: content });
 
-    const response = await fetch(
-        `${config.FASTAPI_URI}/generate`,
-        {
-            method: "POST",
-
-            headers: {
-                "Content-Type": "application/json"
-            },
-
-            body: JSON.stringify({
-                conversation_id,
-                message: content
-            })
-        }
-    );
-
-    if (!response.ok) {
-        throw new AppError("AI service failed", 502);
-    }
-
-    const data = await response.json();
-
-    const aiMessage = await Message.create({
-        conversation_id,
-        sender: "ai",
-        content: data.response,
-        translations: []
-    });
+    const [studentMessage, aiMessage] = await Message.create([
+        { conversation_id, sender: "student", content },
+        { conversation_id, sender: "ai", content: data.response, translations: [] }
+    ]);
 
     res.status(201).json({
         success: true,
@@ -151,32 +123,10 @@ async function translateMessage(req, res) {
 
 
    
-    const response = await fetch(
-        `${config.FASTAPI_URI}/translate`,
-        {
-            method: "POST",
-
-            headers: {
-                "Content-Type": "application/json"
-            },
-
-            body: JSON.stringify({
-                text: message.content,
-                target_language: language
-            })
-        }
-    );
-
-
-    if (!response.ok) {
-        throw new AppError(
-            "Translation service failed",
-            502
-        );
-    }
-
-
-    const data = await response.json();
+    const data = await callAI("/translate", {
+        text: message.content,
+        target_language: language
+    });
 
 
     

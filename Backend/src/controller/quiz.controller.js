@@ -1,6 +1,6 @@
 const Quiz = require("../models/quiz.js");
-const config = require("../config/config.js");
 const AppError = require("../utility/AppError.js");
+const { callAI } = require("../services/ai.service.js");
 
 
 
@@ -17,29 +17,12 @@ async function createQuiz(req, res) {
     const user_id = req.user.id;
 
 
-    const response = await fetch(
-        `${config.FASTAPI_URI}/quiz`,
-        {
-            method: "POST",
-
-            headers: {
-                "Content-Type": "application/json"
-            },
-
-            body: JSON.stringify({
-                subject,
-                topic,
-                language,
-                numberOfQuestions
-            })
-        }
-    );
-
-    if (!response.ok) {
-        throw new AppError("AI service failed", 502);
-    }
-
-    const data = await response.json();
+    const data = await callAI("/quiz", {
+        subject,
+        topic,
+        language,
+        numberOfQuestions
+    });
 
 
     const quiz = await Quiz.create({
@@ -68,11 +51,7 @@ async function getQuizzes(req, res) {
 
     const All = await Quiz.find({
         user_id
-    });
-
-    if (All.length === 0) {
-        throw new AppError("No quizzes found", 404);
-    }
+    }).sort({ updatedAt: -1 });
 
     res.status(200).json({
         success: true,

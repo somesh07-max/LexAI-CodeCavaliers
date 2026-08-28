@@ -14,5 +14,6 @@ const {
 router.post("/signup", validate(signupSchema), WrapAsync(controllers.signUp));
 router.post("/login", validate(loginSchema), WrapAsync(controllers.login));
 router.post("/refresh-token", WrapAsync(controllers.refreshToken));
+router.post("/logout", WrapAsync(controllers.logout));
 
 module.exports = router;

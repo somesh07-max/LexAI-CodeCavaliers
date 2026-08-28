@@ -4,7 +4,8 @@ const WrapAsync = require("../utility/WrapAsync.js");
 const validate = require("../middlewares/validate.js");
 
 const {
-    conversationSchema
+    conversationSchema,
+    conversationUpdateSchema
 } = require("../validations/conversation.validation.js");
 
 const {
@@ -25,7 +26,7 @@ router.get("/", Auth.Authenticated, WrapAsync(getConversations));
 
 router.get("/:id", Auth.Authenticated, WrapAsync(getConversation));
 
-router.patch("/:id", Auth.Authenticated, Auth.AuthorizationConvo, WrapAsync(UpdateConversation));
+router.patch("/:id", Auth.Authenticated, Auth.AuthorizationConvo, validate(conversationUpdateSchema), WrapAsync(UpdateConversation));
 
 router.delete("/:id", Auth.Authenticated, Auth.AuthorizationConvo, WrapAsync(DeleteConversation));
 

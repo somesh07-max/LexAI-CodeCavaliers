@@ -2,3 +2,8 @@
 .env*
 !.env.example
 node_modules/
+.npm-cache/
+.venv/
+__pycache__/
+*.py[cod]
+Backend/.mongodb-binaries/

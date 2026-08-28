@@ -1,0 +1,20 @@
+{
+  "name": "lexai",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently --kill-others-on-fail --names AI,API,WEB --prefix-colors magenta,yellow,cyan \"npm:dev:ai\" \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:ai": ".venv\\Scripts\\python.exe -m uvicorn main:app --app-dir Ai-Services --host 127.0.0.1 --port 8000 --reload",
+    "dev:api": "npm --prefix Backend run dev",
+    "dev:web": "npm --prefix Frontend run dev",
+    "start": "concurrently --kill-others-on-fail --names AI,API,WEB \"npm:start:ai\" \"npm:start:api\" \"npm:start:web\"",
+    "start:ai": ".venv\\Scripts\\python.exe -m uvicorn main:app --app-dir Ai-Services --host 127.0.0.1 --port 8000",
+    "start:api": "npm --prefix Backend start",
+    "start:web": "npm --prefix Frontend run dev",
+    "build": "npm --prefix Frontend run build",
+    "lint": "npm --prefix Frontend run lint"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

@@ -16,7 +16,7 @@ if (isProduction && !process.env.JWT_SECRET) {
 module.exports = {
     NODE_ENV: process.env.NODE_ENV || "development",
     PORT: Number(process.env.PORT || 3000),
-    MONGO_URI: process.env.MONGO_URI || "",
+    MONGO_URI: process.env.MONGO_URI || "mongodb://127.0.0.1:27017/lexai",
     JWT_SECRET: process.env.JWT_SECRET || "lexai-local-development-secret-change-me",
     FASTAPI_URI: (process.env.FASTAPI_URI || "http://127.0.0.1:8000").replace(/\/$/, ""),
     AI_TIMEOUT_MS: Number(process.env.AI_TIMEOUT_MS || 90000),

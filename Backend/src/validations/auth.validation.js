@@ -2,7 +2,7 @@ const Joi = require("joi");
 
 const signupSchema = Joi.object({
     name: Joi.string().required(),
-    email: Joi.string().email().required(),
+    email: Joi.string().trim().lowercase().email().required(),
     college: Joi.string().required(),
     year: Joi.number().required(),
     branch: Joi.string().required(),
@@ -12,7 +12,7 @@ const signupSchema = Joi.object({
 });
 
 const loginSchema = Joi.object({
-    email: Joi.string().email().required(),
+    email: Joi.string().trim().lowercase().email().required(),
     password: Joi.string().required()
 });
 

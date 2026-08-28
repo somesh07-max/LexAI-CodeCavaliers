@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const Conversation = require("../models/conversation.js");
 const config = require("../config/config.js");
+const mongoose = require("mongoose");
 
 
 
@@ -45,6 +46,13 @@ async function AuthorizationConvo(req, res, next) {
         // Different routes name this param differently
         // (":id" for conversation routes, ":conversation_id" for message routes)
         const id = req.params.id || req.params.conversation_id;
+
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid conversation ID"
+            });
+        }
 
         const convo = await Conversation.findById(id);
 
