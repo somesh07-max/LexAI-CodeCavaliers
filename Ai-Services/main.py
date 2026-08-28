@@ -1,5 +1,5 @@
 
-   from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException
 
 from schemas import GenerateRequest, GenerateResponse, TranslateRequest, TranslateResponse
 from model_service import generate_response, translate_text
