@@ -42,9 +42,6 @@ def generate_answer(question: str, context: str, chat_history_messages: list) ->
             }
         )
 
-        print("DEBUG response.content:", response.content)
-        print("DEBUG content type:", type(response.content))
-
         return extract_text(response)
     except Exception as exc:
         raise RuntimeError(

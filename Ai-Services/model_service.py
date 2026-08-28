@@ -1,54 +1,118 @@
 
 """
-This file is where your friend plugs in the real AI model.
- 
-Right now both functions call a local Ollama model as a placeholder,
-so the Node backend can already connect and get real responses back.
-When the real model is ready, just replace what's INSIDE these two
-functions. Keep the function names and inputs/outputs the same, and
-main.py never needs to change.
+model_service.py
+-----------------
+Bridges the FastAPI endpoints in main.py to your actual AI tutor engine:
+
+    ai_tutor/vector_store.py -> load_vectorstore() (FAISS index on disk)
+    ai_tutor/retriever.py    -> retrieve() / build_context_string() / format_sources()
+    ai_tutor/rag.py          -> generate_answer() (RAG + chat history)
+    ai_tutor/translator.py   -> translate() (Sarvam)
+
+This REPLACES the old Ollama/httpx implementation. There is no second
+process to run anymore — no "python test_terminal.py" step. FastAPI is
+now the thing that runs your model.
+
+Because your retriever.py returns structured sources (document/page/
+subject/unit) as well as the context string, /generate now returns
+`sources` alongside `response` (see the updated GenerateResponse in
+schemas.py). Node's message.controller.js currently only reads
+data.response, so this is backward compatible - but the source list
+is there if/when you want to store or display it.
 """
- 
-import httpx
- 
-OLLAMA_HOST = "http://localhost:11434"
-OLLAMA_MODEL = "llama3"
- 
- 
-async def generate_response(conversation_id: str, message: str) -> str:
+import sys
+import asyncio
+from pathlib import Path
+from dotenv import load_dotenv
+
+
+# AI Tutor Project ka exact path (Typo fixed: AI_TUTOR_PROJECT)
+AI_TUTOR_PROJECT = (
+    Path(__file__).resolve().parent
+    / "tutor"
+    / "ai_tutor_project"
+)
+load_dotenv(AI_TUTOR_PROJECT / ".env")
+
+# Sys path me add karein
+if str(AI_TUTOR_PROJECT) not in sys.path:
+    sys.path.insert(0, str(AI_TUTOR_PROJECT))
+
+# Correct Imports (ai_tutor with UNDERSCORE)
+from ai_tutor import config
+from ai_tutor.vector_store import load_vectorstore
+from ai_tutor.retriever import retrieve, build_context_string, format_sources
+from ai_tutor.rag import generate_answer, build_chat_history_messages
+from ai_tutor import translator
+
+def _get_vectorstore():
+    global _vectorstore
+    if _vectorstore is None:
+        _vectorstore = load_vectorstore()
+        if _vectorstore is None:
+            raise RuntimeError(
+                f"No vector store found at {config.VECTOR_DB_PATH}. "
+                "Run ingest.py first to build the knowledge base."
+            )
+    return _vectorstore
+
+
+def _retrieve(question: str):
+    """Blocking: FAISS similarity search + doc formatting. Returns (context, sources)."""
+    vectorstore = _get_vectorstore()
+    docs = retrieve(vectorstore, question)
+    context = build_context_string(docs)
+    sources = format_sources(docs)
+    return context, sources
+
+
+# --------------------------------------------------------------
+# In-memory per-conversation history.
+# --------------------------------------------------------------
+# Your Node side (message.controller.js) already persists every
+# message to Mongo, keyed by conversation_id, but it never sends
+# prior turns to FastAPI - it only sends {conversation_id, message}.
+# So FastAPI needs *some* record of "chat_history" to build the
+# HumanMessage/AIMessage pairs rag.py expects.
+#
+# This dict works for local testing but resets whenever you restart
+# uvicorn, and won't be correct if you ever run more than one FastAPI
+# worker/process (each gets its own memory). For anything beyond a
+# single-process dev server, either:
+#   (a) have Node send the recent turns in the request body, or
+#   (b) have FastAPI read them from Mongo/your DB directly.
+# --------------------------------------------------------------
+_conversation_history: dict[str, list[dict]] = {}
+
+
+async def generate_response(conversation_id: str, message: str) -> tuple[str, list[dict]]:
     """
-    Takes the student's message, returns the AI tutor's reply (a string).
+    Takes the student's message, returns (answer, sources).
+    Called by POST /generate (see main.py).
     """
-    payload = {
-        "model": OLLAMA_MODEL,
-        "prompt": message,
-        "stream": False,
-    }
- 
-    async with httpx.AsyncClient(timeout=60) as client:
-        resp = await client.post(f"{OLLAMA_HOST}/api/generate", json=payload)
- 
-    data = resp.json()
-    return data["response"]
- 
- 
+    # Both retrieval (embeddings + FAISS search) and generate_answer()
+    # (Gemini call via LangChain) are synchronous/blocking. Running
+    # them directly inside an `async def` would freeze the whole
+    # FastAPI event loop for every other in-flight request, so both
+    # go through asyncio.to_thread().
+    context, sources = await asyncio.to_thread(_retrieve, message)
+
+    turns = _conversation_history.get(conversation_id, [])
+    chat_history_messages = build_chat_history_messages(turns)
+
+    answer = await asyncio.to_thread(
+        generate_answer, message, context, chat_history_messages
+    )
+
+    turns.append({"question": message, "answer": answer})
+    _conversation_history[conversation_id] = turns
+
+    return answer, sources
+
+
 async def translate_text(text: str, target_language: str) -> str:
     """
-    Takes text + a target language, returns the translated text (a string).
+    Takes text + a target language, returns the translated text.
+    Called by POST /translate (see main.py).
     """
-    prompt = (
-        f"Translate the following text into {target_language}. "
-        f"Return only the translated text, nothing else.\n\n{text}"
-    )
- 
-    payload = {
-        "model": OLLAMA_MODEL,
-        "prompt": prompt,
-        "stream": False,
-    }
- 
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(f"{OLLAMA_HOST}/api/generate", json=payload)
- 
-    data = resp.json()
-    return data["response"].strip()
+    return await asyncio.to_thread(translator.translate, text, target_language)
