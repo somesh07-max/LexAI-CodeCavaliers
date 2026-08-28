@@ -121,7 +121,7 @@ export default function AssistantPage() {
       setConversations((items) => items.map((item) => item._id === active._id ? { ...item, updatedAt: new Date().toISOString() } : item));
     } catch (err) {
       setMessages((items) => items.filter((item) => item._id !== typingId).map((item) => item._id === studentId ? { ...item, failed: true, optimistic: false } : item));
-      if (err.response?.status !== 502) setError(apiMessage(err));
+      setError(apiMessage(err));
     } finally { setSending(false); }
   }
 

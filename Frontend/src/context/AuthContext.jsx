@@ -18,7 +18,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(storedUser);
   const [ready, setReady] = useState(false);
 
-  const logout = useCallback(() => {
+  const clearSession = useCallback(() => {
     setAccessToken(null);
     setUser(null);
     sessionStorage.removeItem(USER_KEY);
@@ -26,15 +26,29 @@ export function AuthProvider({ children }) {
     navigate('/', { replace: true });
   }, [navigate]);
 
+  const logout = useCallback(async () => {
+    try {
+      await api.post('/auth/logout');
+    } finally {
+      clearSession();
+    }
+  }, [clearSession]);
+
   useEffect(() => {
-    setSessionExpiredHandler(logout);
-    restoreAccessToken().catch(() => {
+    setSessionExpiredHandler(clearSession);
+    restoreAccessToken().then((data) => {
+      if (data.user) {
+        setUser(data.user);
+        const storage = localStorage.getItem(USER_KEY) ? localStorage : sessionStorage;
+        storage.setItem(USER_KEY, JSON.stringify(data.user));
+      }
+    }).catch(() => {
       setAccessToken(null);
       setUser(null);
       sessionStorage.removeItem(USER_KEY);
       localStorage.removeItem(USER_KEY);
     }).finally(() => setReady(true));
-  }, [logout]);
+  }, [clearSession]);
 
   const authenticate = useCallback((token, nextUser, { remember = false } = {}) => {
     setAccessToken(token);

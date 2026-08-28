@@ -43,5 +43,5 @@ api.interceptors.response.use(
 export const restoreAccessToken = async () => {
   const { data } = await refreshClient.post('/auth/refresh-token');
   setAccessToken(data.accessToken);
-  return data.accessToken;
+  return data;
 };

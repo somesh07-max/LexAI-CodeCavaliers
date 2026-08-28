@@ -4,6 +4,21 @@ const bcrypt = require("bcrypt");
 const config = require("../config/config.js");
 const AppError = require("../utility/AppError.js");
 
+function refreshCookieOptions() {
+    const production = config.NODE_ENV === "production";
+    return {
+        httpOnly: true,
+        secure: production,
+        sameSite: production ? "none" : "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000
+    };
+}
+
+function safeUser(user) {
+    const value = user.toObject();
+    delete value.password;
+    return value;
+}
 
 
 
@@ -35,7 +50,8 @@ async function signUp(req, res) {
     }
 
 
-    const existingUser = await User.findOne({ email });
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingUser = await User.findOne({ email: normalizedEmail });
 
     if (existingUser) {
         throw new AppError(
@@ -50,7 +66,7 @@ async function signUp(req, res) {
 
     const newUser = await User.create({
         name,
-        email,
+        email: normalizedEmail,
         password: hashedPassword,
         college,
         year,
@@ -82,15 +98,9 @@ async function signUp(req, res) {
     );
 
 
-    res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 7 * 24 * 60 * 60 * 1000
-    });
+    res.cookie("refreshToken", refreshToken, refreshCookieOptions());
 
-    const userToReturn = newUser.toObject();
-    delete userToReturn.password;
+    const userToReturn = safeUser(newUser);
 
     res.status(201).json({
         success: true,
@@ -108,7 +118,7 @@ async function login(req, res) {
     const { email, password } = req.body;
 
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
 
     if (!user) {
         throw new AppError("User not found", 404);
@@ -148,15 +158,9 @@ async function login(req, res) {
     );
 
 
-    res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 7 * 24 * 60 * 60 * 1000
-    });
+    res.cookie("refreshToken", refreshToken, refreshCookieOptions());
 
-    const userToReturn = user.toObject();
-    delete userToReturn.password;
+    const userToReturn = safeUser(user);
 
     res.status(200).json({
         success: true,
@@ -191,6 +195,11 @@ async function refreshToken(req, res) {
 
 
     const id = decoded.id;
+    const user = await User.findById(id);
+
+    if (!user) {
+        throw new AppError("User not found", 401);
+    }
 
 
     const accessToken = jwt.sign(
@@ -215,23 +224,30 @@ async function refreshToken(req, res) {
     );
 
 
-    res.cookie("refreshToken", newRefreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 7 * 24 * 60 * 60 * 1000
-    });
+    res.cookie("refreshToken", newRefreshToken, refreshCookieOptions());
 
 
     res.status(200).json({
         success: true,
-        accessToken
+        accessToken,
+        user: safeUser(user)
     });
+}
+
+async function logout(req, res) {
+    const production = config.NODE_ENV === "production";
+    res.clearCookie("refreshToken", {
+        httpOnly: true,
+        secure: production,
+        sameSite: production ? "none" : "lax"
+    });
+    res.status(200).json({ success: true, message: "Logged out successfully" });
 }
 
 
 module.exports = {
     signUp,
     login,
-    refreshToken
+    refreshToken,
+    logout
 };

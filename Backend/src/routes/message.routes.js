@@ -35,6 +35,7 @@ router.post(
 router.get(
     "/:conversation_id",
     Auth.Authenticated,
+    Auth.AuthorizationConvo,
     WrapAsync(getMessages)
 );
 

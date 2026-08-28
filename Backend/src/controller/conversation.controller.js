@@ -1,4 +1,5 @@
 const Conversation = require("../models/conversation.js");
+const Message = require("../models/message.js");
 const AppError = require("../utility/AppError.js");
 
 
@@ -33,11 +34,7 @@ async function getConversations(req, res) {
 
     const All = await Conversation.find({
         user_id
-    });
-
-    if (All.length === 0) {
-        throw new AppError("No conversations found", 404);
-    }
+    }).sort({ updatedAt: -1 });
 
     res.status(200).json({
         success: true,
@@ -83,6 +80,8 @@ async function DeleteConversation(req, res) {
     if (!oneConvo) {
         throw new AppError("Conversation not found", 404);
     }
+
+    await Message.deleteMany({ conversation_id: id });
 
     res.status(200).json({
         success: true,
