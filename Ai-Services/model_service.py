@@ -23,22 +23,27 @@ is there if/when you want to store or display it.
 import sys
 import asyncio
 from pathlib import Path
+from dotenv import load_dotenv
 
+
+# AI Tutor Project ka exact path (Typo fixed: AI_TUTOR_PROJECT)
 AI_TUTOR_PROJECT = (
     Path(__file__).resolve().parent
     / "tutor"
-    / "ai-tutor-project"
+    / "ai_tutor_project"
 )
+load_dotenv(AI_TUTOR_PROJECT / ".env")
 
-sys.path.insert(0, str(AI_TUTOR_PROJECT))
+# Sys path me add karein
+if str(AI_TUTOR_PROJECT) not in sys.path:
+    sys.path.insert(0, str(AI_TUTOR_PROJECT))
 
+# Correct Imports (ai_tutor with UNDERSCORE)
 from ai_tutor import config
 from ai_tutor.vector_store import load_vectorstore
 from ai_tutor.retriever import retrieve, build_context_string, format_sources
 from ai_tutor.rag import generate_answer, build_chat_history_messages
 from ai_tutor import translator
-_vectorstore = None  # cached after first load, same pattern as llm.py's _llm
-
 
 def _get_vectorstore():
     global _vectorstore
