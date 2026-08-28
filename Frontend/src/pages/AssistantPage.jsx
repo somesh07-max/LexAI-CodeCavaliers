@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { apiMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { Brand, EmptyState, ErrorBanner, Icon, PulseLoader } from '../components/UI';
+import { Brand, EmptyState, ErrorBanner, Icon, PulseLoader, brandAssets } from '../components/UI';
 
 const languageOptions = ['English', 'Hindi', 'Tamil', 'Bengali', 'Telugu', 'Marathi', 'Gujarati', 'Kannada', 'Malayalam', 'Punjabi'];
 
@@ -49,9 +49,9 @@ function TranslationPicker({ message, cache, onTranslate }) {
 }
 
 function MessageBubble({ message, translationCache, onTranslate, onRetry }) {
-  if (message.kind === 'typing') return <div className="message-row ai"><div className="ai-avatar"><Icon name="bridge" size={17} /></div><div className="message-bubble typing"><PulseLoader label="Tutor is thinking…" compact /></div></div>;
+  if (message.kind === 'typing') return <div className="message-row ai"><div className="ai-avatar"><img src={brandAssets.mark} alt="" /></div><div className="message-bubble typing"><PulseLoader label="Tutor is thinking…" compact /></div></div>;
   const student = message.sender === 'student';
-  return <div className={`message-row ${student ? 'student' : 'ai'}`}>{!student && <div className="ai-avatar"><Icon name="bridge" size={17} /></div>}<div className={`message-bubble ${message.failed ? 'failed' : ''}`}><p>{message.content}</p><time>{message.createdAt ? new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Sending'}</time>{message.failed && <button className="retry-message" onClick={() => onRetry(message)}><Icon name="retry" size={15} />Couldn’t reach the tutor — tap to retry</button>}{!student && !message.failed && <TranslationPicker message={message} cache={translationCache} onTranslate={onTranslate} />}</div></div>;
+  return <div className={`message-row ${student ? 'student' : 'ai'}`}>{!student && <div className="ai-avatar"><img src={brandAssets.mark} alt="" /></div>}<div className={`message-bubble ${message.failed ? 'failed' : ''}`}><p>{message.content}</p><time>{message.createdAt ? new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Sending'}</time>{message.failed && <button className="retry-message" onClick={() => onRetry(message)}><Icon name="retry" size={15} />Couldn’t reach the tutor — tap to retry</button>}{!student && !message.failed && <TranslationPicker message={message} cache={translationCache} onTranslate={onTranslate} />}</div></div>;
 }
 
 function MessageThread({ messages, loading, translations, onTranslate, onRetry }) {
