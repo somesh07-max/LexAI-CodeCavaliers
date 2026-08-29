@@ -1,40 +1,42 @@
 from fastapi import FastAPI, HTTPException
 
-from model_service import generate_quiz, generate_response, get_provider_status, translate_text
-from schemas import GenerateRequest, GenerateResponse, QuizRequest, QuizResponse, TranslateRequest, TranslateResponse
+from schemas import GenerateRequest, GenerateResponse, TranslateRequest, TranslateResponse
+from model_service import generate_response, translate_text
 
-app = FastAPI(title="LexAi AI Service", version="1.0.0")
-
-
-def service_error(error: Exception) -> HTTPException:
-    return HTTPException(status_code=503, detail=str(error))
+app = FastAPI()
 
 
 @app.post("/generate", response_model=GenerateResponse)
 async def generate(payload: GenerateRequest):
+    """
+    Called from message.controller.js -> createMessage()
+    body sent by Node: { conversation_id, message }
+    Node reads: data.response
+    """
     try:
-        return GenerateResponse(response=await generate_response(payload.conversation_id, payload.message))
-    except Exception as error:
-        raise service_error(error) from error
+        text, sources = await generate_response(payload.conversation_id, payload.message)
+    except RuntimeError as exc:
+        # e.g. missing GEMINI_API_KEY, no vector store built yet, or a
+        # Gemini API error raised inside ai_tutor/rag.py
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return GenerateResponse(response=text, sources=sources)
 
 
 @app.post("/translate", response_model=TranslateResponse)
 async def translate(payload: TranslateRequest):
+    """
+    Called from message.controller.js -> translateMessage()
+    body sent by Node: { text, target_language }
+    Node reads: data.response
+    """
     try:
-        return TranslateResponse(response=await translate_text(payload.text, payload.target_language))
-    except Exception as error:
-        raise service_error(error) from error
-
-
-@app.post("/quiz", response_model=QuizResponse)
-async def quiz(payload: QuizRequest):
-    try:
-        questions = await generate_quiz(payload.subject, payload.topic, payload.language, payload.numberOfQuestions)
-        return QuizResponse(questions=questions)
-    except Exception as error:
-        raise service_error(error) from error
+        translated = await translate_text(payload.text, payload.target_language)
+    except RuntimeError as exc:
+        # e.g. missing SARVAM_API_KEY, or a Sarvam API error
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return TranslateResponse(response=translated)
 
 
 @app.get("/health")
 async def health():
-    return {"success": True, "status": "ok", **get_provider_status()}
+    return {"success": True, "status": "ok"}
